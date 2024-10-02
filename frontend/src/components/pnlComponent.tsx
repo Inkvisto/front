@@ -3,7 +3,14 @@ import {
   TradingViewComponent,
   WalletBox,
 } from '@/styles/pnl.styles';
-import React, { memo, useMemo,  createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  memo,
+  useMemo,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { Box } from '@mui/material';
 import OrderPlacement from './order-placement-terminal';
 import { FlexItems } from '@/styles/common.styles';
@@ -13,11 +20,11 @@ import OrderBookAndTrades from './order-book-and-trades';
 import TokenPairInformation from './token-pair-information';
 import { usePairTokensContext } from '@/context/pairTokensContext';
 import { useWebDataContext } from '@/context/webDataContext';
-import dynamic from "next/dynamic";
+import dynamic from 'next/dynamic';
 import {
   ChartingLibraryWidgetOptions,
   ResolutionString,
-} from "@/public/static/charting_library";
+} from '@/public/static/charting_library';
 
 import {
   generateSymbol,
@@ -28,10 +35,9 @@ import {
   unsubscribeFromStream,
 } from '@/components/TVChartContainer/streaming';
 
-
 const TVChartContainer = dynamic(
   () =>
-    import("@/components/TVChartContainer").then((mod) => mod.TVChartContainer),
+    import('@/components/TVChartContainer').then((mod) => mod.TVChartContainer),
   { ssr: false }
 );
 //------Memoized Component to ------
@@ -50,10 +56,9 @@ const PnlComponent = () => {
 
   const { allTokenPairs, tokenPairData } = usePairTokensContext();
 
- 
   let merged = tokenPairData;
-    merged = merged.concat(allTokenPairs);
-    // ====== //
+  merged = merged.concat(allTokenPairs);
+  // ====== //
 
   const lastBarsCache = new Map();
 
@@ -63,36 +68,38 @@ const PnlComponent = () => {
     supported_resolutions: ['1H', '1D', '1W', '1M'],
 
     // The `exchanges` arguments are used for the `searchSymbols` method if a user selects the exchange
-    exchanges: [{
-      value: 'Hyperliquid',
-      name: 'Hyperliquid',
-      desc: 'Hyperliquid',
-    },
+    exchanges: [
+      {
+        value: 'Hyperliquid',
+        name: 'Hyperliquid',
+        desc: 'Hyperliquid',
+      },
     ],
     // The `symbols_types` arguments are used for the `searchSymbols` method if a user selects this symbol type
-    symbols_types: [{
-      name: 'crypto',
-      value: 'crypto',
-    },
+    symbols_types: [
+      {
+        name: 'crypto',
+        value: 'crypto',
+      },
     ],
   };
 
   // Obtains all symbols for all exchanges supported by CryptoCompare API
   async function getAllSymbols() {
-    console.log(JSON.stringify(await tokenPairData))
-   
-    let allSymbols = merged.map( (item: any ) => {
-      let formatted_pair = item.pairs.replaceAll("-", "/");
+    console.log(JSON.stringify(await tokenPairData));
+
+    let allSymbols = merged.map((item: any) => {
+      let formatted_pair = item.pairs.replaceAll('-', '/');
       return {
         symbol: formatted_pair,
         full_name: `Hyperliquid:${formatted_pair}`,
         description: formatted_pair,
-        exchange: "Hyperliquid",
-        type: 'crypto'
-      }
-    })
+        exchange: 'Hyperliquid',
+        type: 'crypto',
+      };
+    });
 
-    console.log(allSymbols)
+    console.log(allSymbols);
     return allSymbols;
   }
 
@@ -100,7 +107,7 @@ const PnlComponent = () => {
     allSymbolsCtx: [],
 
     setAllSymbolsCtx(newCtx: any) {
-      this.allSymbolsCtx = newCtx
+      this.allSymbolsCtx = newCtx;
     },
 
     onReady: (callback: any) => {
@@ -112,15 +119,15 @@ const PnlComponent = () => {
       userInput: any,
       exchange: any,
       symbolType: any,
-      onResultReadyCallback: any,
+      onResultReadyCallback: any
     ) => {
       console.log('[searchSymbols]: Method call');
-      const symbols = await getAllSymbols()
-      const newSymbols = symbols.filter( ( symbol: any ) => {
+      const symbols = await getAllSymbols();
+      const newSymbols = symbols.filter((symbol: any) => {
         const isExchangeValid = exchange === '' || symbol.exchange === exchange;
-        const isFullSymbolContainsInput = symbol.full_name
-          .toLowerCase()
-          .indexOf(userInput.toLowerCase()) !== -1;
+        const isFullSymbolContainsInput =
+          symbol.full_name.toLowerCase().indexOf(userInput.toLowerCase()) !==
+          -1;
         return isExchangeValid && isFullSymbolContainsInput;
       });
       onResultReadyCallback(newSymbols);
@@ -135,9 +142,9 @@ const PnlComponent = () => {
       console.log('[resolveSymbol]: Method call', symbolName);
       const symbols = await getAllSymbols();
       console.log(symbols, symbolName);
-      const symbolItem = symbols.find(({
-        full_name,
-      }: { full_name: any }) => full_name === symbolName);
+      const symbolItem = symbols.find(
+        ({ full_name }: { full_name: any }) => full_name === symbolName
+      );
       if (!symbolItem) {
         console.log('[resolveSymbol]: Cannot resolve symbol', symbolName);
         onResolveErrorCallback('cannot resolve symbol');
@@ -166,25 +173,33 @@ const PnlComponent = () => {
       onSymbolResolvedCallback(symbolInfo);
     },
 
-    getBars: async (symbolInfo: any, resolution: any, periodParams: any, onHistoryCallback: any, onErrorCallback: any) => {
+    getBars: async (
+      symbolInfo: any,
+      resolution: any,
+      periodParams: any,
+      onHistoryCallback: any,
+      onErrorCallback: any
+    ) => {
       const { from, to, firstDataRequest } = periodParams;
       console.log('[getBars]: Method call', symbolInfo, resolution, from, to);
       const parsedSymbol: any = parseFullSymbol(symbolInfo.full_name);
       try {
         let headers = new Headers();
-        headers.append("Content-Type", "application/json");
-
+        headers.append('Content-Type', 'application/json');
 
         let raw = JSON.stringify({
-          "endpoint": "info",
-          "type": parsedSymbol.toSymbol === "USD" ? "candleSnapshot" : "pairCandleSnapshot",
-          "req": {
-            "coin": parsedSymbol.fromSymbol,
-            "interval": "1h",
-            "startTime": from * 1000,
-            "endTime": to * 1000
+          endpoint: 'info',
+          type:
+            parsedSymbol.toSymbol === 'USD'
+              ? 'candleSnapshot'
+              : 'pairCandleSnapshot',
+          req: {
+            coin: parsedSymbol.fromSymbol,
+            interval: '1h',
+            startTime: from * 1000,
+            endTime: to * 1000,
           },
-          "pair_coin": parsedSymbol.toSymbol
+          pair_coin: parsedSymbol.toSymbol,
         });
 
         let requestOptions = {
@@ -193,20 +208,27 @@ const PnlComponent = () => {
           body: raw,
         };
 
-        let url = parsedSymbol.toSymbol === "USD" ? "https://api.hyperliquid.xyz/info" : "http://127.0.0.1:5000/hyperliquid" 
-        let data = await fetch(url, requestOptions)
-          .then(response => response.json());
+        let url =
+          parsedSymbol.toSymbol === 'USD'
+            ? 'https://api.hyperliquid.xyz/info'
+            : 'http://127.0.0.1:5000/hyperliquid';
+        let data = await fetch(url, requestOptions).then((response) =>
+          response.json()
+        );
         let bars: any[] = [];
-        let response = parsedSymbol.toSymbol === "USD" ? data : data.data
+        let response = parsedSymbol.toSymbol === 'USD' ? data : data.data;
         response.forEach((bar: any) => {
           if (bar.t >= from * 1000 && bar.T < to * 1000) {
-            bars = [...bars, {
-              time: bar.t,
-              low: bar.l,
-              high: bar.h,
-              open: bar.o,
-              close: bar.c,
-            }];
+            bars = [
+              ...bars,
+              {
+                time: bar.t,
+                low: bar.l,
+                high: bar.h,
+                open: bar.o,
+                close: bar.c,
+              },
+            ];
           }
         });
         if (firstDataRequest) {
@@ -229,21 +251,27 @@ const PnlComponent = () => {
       resolution: any,
       onRealtimeCallback: any,
       subscriberUID: any,
-      onResetCacheNeededCallback: any,
+      onResetCacheNeededCallback: any
     ) => {
-      console.log('[subscribeBars]: Method call with subscriberUID:', subscriberUID);
+      console.log(
+        '[subscribeBars]: Method call with subscriberUID:',
+        subscriberUID
+      );
       subscribeOnStream(
         symbolInfo,
         resolution,
         onRealtimeCallback,
         subscriberUID,
         onResetCacheNeededCallback,
-        lastBarsCache.get(symbolInfo.full_name),
+        lastBarsCache.get(symbolInfo.full_name)
       );
     },
 
     unsubscribeBars: (subscriberUID: any) => {
-      console.log('[unsubscribeBars]: Method call with subscriberUID:', subscriberUID);
+      console.log(
+        '[unsubscribeBars]: Method call with subscriberUID:',
+        subscriberUID
+      );
       unsubscribeFromStream(subscriberUID);
     },
   };
@@ -253,18 +281,19 @@ const PnlComponent = () => {
   const balance = webData2.clearinghouseState?.marginSummary.accountValue;
 
   const renderAdvancedChart = tokenPairs.length > 1; //render chart only when token pairs are selected
+  const renderMerged = merged.length > 1; //render chart only when token pairs are selected
 
   const defaultWidgetProps: Partial<ChartingLibraryWidgetOptions> = {
-    interval: "1H" as ResolutionString,
+    interval: '1H' as ResolutionString,
     datafeed: datafeed,
-    library_path: "/static/charting_library/charting_library/",
-    locale: "en",
+    library_path: '/static/charting_library/charting_library/',
+    locale: 'en',
     fullscreen: false,
     autosize: true,
-    theme: "dark",
+    theme: 'dark',
     symbol: tokenPairs ? `Hyperliquid:${tokenPairs[0]}/${tokenPairs[1]}` : '',
   };
-  
+
   return (
     <PnlWrapper>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -275,7 +304,7 @@ const PnlComponent = () => {
             renderAdvancedChart ? (
               <AdvancedChartMemoized {...defaultWidgetProps} />
             ) : null,
-          [renderAdvancedChart, tokenPairs]
+          [renderAdvancedChart, tokenPairs, renderMerged]
         )}
 
         <PositionsOrdersHistory />
